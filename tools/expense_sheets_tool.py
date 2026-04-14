@@ -97,9 +97,10 @@ def handle_log_expense(merchant: str, amount: float, category: str,
 
 
 registry.register(
+    name="log_expense",
+    toolset=TOOLSET,
     schema=LOG_EXPENSE_SCHEMA,
     handler=handle_log_expense,
-    toolset=TOOLSET,
     check_fn=_sheets_configured,
 )
 
@@ -135,9 +136,10 @@ def handle_update_budget(category: str, monthly_limit: float, **kwargs) -> str:
 
 
 registry.register(
+    name="update_budget",
+    toolset=TOOLSET,
     schema=UPDATE_BUDGET_SCHEMA,
     handler=handle_update_budget,
-    toolset=TOOLSET,
     check_fn=_sheets_configured,
 )
 
@@ -178,8 +180,9 @@ def handle_get_remaining_budget(category: str | None = None,
 
 
 registry.register(
+    name="get_remaining_budget",
+    toolset=TOOLSET,
     schema=GET_BUDGET_SCHEMA,
     handler=handle_get_remaining_budget,
-    toolset=TOOLSET,
     check_fn=_sheets_configured,
 )
