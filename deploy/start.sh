@@ -11,8 +11,16 @@ if [ -n "${GOOGLE_SERVICE_ACCOUNT_JSON:-}" ]; then
     echo "Service account JSON written to $SA_PATH"
 fi
 
-if [ -n "${MINIMAX_API_KEY:-}" ]; then
-    cat > "$HERMES_HOME/.env" <<ENVEOF
+# Export all vars so hermes sees them immediately (not just via .env file)
+export MINIMAX_API_KEY="${MINIMAX_API_KEY:-}"
+export GOOGLE_SERVICE_ACCOUNT_JSON="$SA_PATH"
+export GSPREAD_SPREADSHEET_ID="${GSPREAD_SPREADSHEET_ID:-}"
+export WEBHOOK_HMAC_SECRET="${WEBHOOK_HMAC_SECRET:-}"
+export TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-}"
+export TELEGRAM_ALLOWED_USER_IDS="${TELEGRAM_ALLOWED_USER_IDS:-}"
+
+# Also write to .env for any hermes internals that read from file
+cat > "$HERMES_HOME/.env" <<ENVEOF
 MINIMAX_API_KEY=${MINIMAX_API_KEY}
 GOOGLE_SERVICE_ACCOUNT_JSON=${SA_PATH}
 GSPREAD_SPREADSHEET_ID=${GSPREAD_SPREADSHEET_ID:-}
@@ -20,8 +28,7 @@ WEBHOOK_HMAC_SECRET=${WEBHOOK_HMAC_SECRET:-}
 TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
 TELEGRAM_ALLOWED_USER_IDS=${TELEGRAM_ALLOWED_USER_IDS:-}
 ENVEOF
-    echo "Environment written to $HERMES_HOME/.env"
-fi
+echo "Environment written to $HERMES_HOME/.env"
 
 # Link persistent disk paths
 for dir in sessions memories cron; do
@@ -36,4 +43,5 @@ for dir in sessions memories cron; do
 done
 
 echo "Starting Hermes gateway..."
-exec hermes gateway start
+echo "TELEGRAM_BOT_TOKEN is set: $([ -n "$TELEGRAM_BOT_TOKEN" ] && echo 'yes' || echo 'NO')"
+exec hermes gateway start --platform telegram 2>&1
