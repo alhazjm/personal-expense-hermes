@@ -16,7 +16,7 @@ services:
         sync: false
       - key: TELEGRAM_BOT_TOKEN
         sync: false
-      - key: TELEGRAM_ALLOWED_USER_IDS
+      - key: TELEGRAM_ALLOWED_USERS
         sync: false
     disk:
       name: hermes-data

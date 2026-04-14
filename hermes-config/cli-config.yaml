@@ -19,17 +19,12 @@ tools:
 memory:
   mode: "local"
 
-gateway:
-  platforms:
-    - name: "telegram"
-      enabled: true
-      home_channel:
-        chat_id: "${TELEGRAM_ALLOWED_USER_IDS}"
-        name: "Home"
-    - name: "webhook"
-      enabled: true
-      port: 8644
-      hmac_secret: "${WEBHOOK_HMAC_SECRET}"
+platforms:
+  telegram:
+    enabled: true
+  webhook:
+    enabled: true
+    port: 8644
 
 display:
   skin: "default"

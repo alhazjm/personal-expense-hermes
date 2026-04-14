@@ -11,22 +11,26 @@ if [ -n "${GOOGLE_SERVICE_ACCOUNT_JSON:-}" ]; then
     echo "Service account JSON written to $SA_PATH"
 fi
 
-# Export all vars so hermes sees them immediately (not just via .env file)
+# Export all vars so hermes sees them immediately
 export MINIMAX_API_KEY="${MINIMAX_API_KEY:-}"
 export GOOGLE_SERVICE_ACCOUNT_JSON="$SA_PATH"
 export GSPREAD_SPREADSHEET_ID="${GSPREAD_SPREADSHEET_ID:-}"
 export WEBHOOK_HMAC_SECRET="${WEBHOOK_HMAC_SECRET:-}"
 export TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-}"
-export TELEGRAM_ALLOWED_USER_IDS="${TELEGRAM_ALLOWED_USER_IDS:-}"
+export TELEGRAM_ALLOWED_USERS="${TELEGRAM_ALLOWED_USERS:-}"
+export TELEGRAM_HOME_CHANNEL="${TELEGRAM_ALLOWED_USERS:-}"
+export TELEGRAM_HOME_CHANNEL_NAME="Home"
 
-# Also write to .env for any hermes internals that read from file
+# Also write to .env for hermes internals
 cat > "$HERMES_HOME/.env" <<ENVEOF
 MINIMAX_API_KEY=${MINIMAX_API_KEY}
 GOOGLE_SERVICE_ACCOUNT_JSON=${SA_PATH}
 GSPREAD_SPREADSHEET_ID=${GSPREAD_SPREADSHEET_ID:-}
 WEBHOOK_HMAC_SECRET=${WEBHOOK_HMAC_SECRET:-}
 TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
-TELEGRAM_ALLOWED_USER_IDS=${TELEGRAM_ALLOWED_USER_IDS:-}
+TELEGRAM_ALLOWED_USERS=${TELEGRAM_ALLOWED_USERS:-}
+TELEGRAM_HOME_CHANNEL=${TELEGRAM_ALLOWED_USERS:-}
+TELEGRAM_HOME_CHANNEL_NAME=Home
 ENVEOF
 echo "Environment written to $HERMES_HOME/.env"
 
@@ -42,6 +46,9 @@ for dir in sessions memories cron; do
     fi
 done
 
-echo "Starting Hermes gateway..."
+echo "Starting Hermes gateway (foreground)..."
 echo "TELEGRAM_BOT_TOKEN is set: $([ -n "$TELEGRAM_BOT_TOKEN" ] && echo 'yes' || echo 'NO')"
-exec hermes gateway start --platform telegram 2>&1
+echo "TELEGRAM_ALLOWED_USERS: ${TELEGRAM_ALLOWED_USERS:-not set}"
+
+# Use 'gateway run' (foreground) — 'gateway start' requires systemd which Docker doesn't have
+exec hermes gateway run < /dev/null 2>&1
