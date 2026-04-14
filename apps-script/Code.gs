@@ -9,7 +9,7 @@
  *   - Credit card: "A transaction of SGD 55.00 was made with your UOB Card ending XXXX on DD/MM/YY at MERCHANT"
  */
 
-const WEBHOOK_URL = "http://localhost:8644/webhook/expense-ingest";
+const WEBHOOK_URL = "https://personal-expense-hermes-deploy.onrender.com/webhook/expense-ingest";
 const WEBHOOK_SECRET = PropertiesService.getScriptProperties().getProperty("WEBHOOK_HMAC_SECRET");
 
 const GMAIL_QUERY = 'from:(alerts@dbs.com OR unialerts@uobgroup.com) subject:(transaction OR alert OR PayLah) is:unread';

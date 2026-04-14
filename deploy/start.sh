@@ -4,10 +4,17 @@ set -euo pipefail
 HERMES_HOME="${HERMES_HOME:-/root/.hermes}"
 mkdir -p "$HERMES_HOME"
 
+# Write service account JSON to a file instead of inlining in .env
+SA_PATH="/data/service-account.json"
+if [ -n "${GOOGLE_SERVICE_ACCOUNT_JSON:-}" ]; then
+    echo "${GOOGLE_SERVICE_ACCOUNT_JSON}" > "$SA_PATH"
+    echo "Service account JSON written to $SA_PATH"
+fi
+
 if [ -n "${MINIMAX_API_KEY:-}" ]; then
     cat > "$HERMES_HOME/.env" <<ENVEOF
 MINIMAX_API_KEY=${MINIMAX_API_KEY}
-GOOGLE_SERVICE_ACCOUNT_JSON=${GOOGLE_SERVICE_ACCOUNT_JSON:-}
+GOOGLE_SERVICE_ACCOUNT_JSON=${SA_PATH}
 GSPREAD_SPREADSHEET_ID=${GSPREAD_SPREADSHEET_ID:-}
 WEBHOOK_HMAC_SECRET=${WEBHOOK_HMAC_SECRET:-}
 TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}

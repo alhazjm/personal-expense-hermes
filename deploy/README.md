@@ -58,12 +58,12 @@ Telegram bot connected
 
 Once deployed, your service URL will be something like:
 ```
-https://hermes-expense-tracker.onrender.com
+https://personal-expense-hermes-deploy.onrender.com
 ```
 
 Update `WEBHOOK_URL` in your Apps Script (`Code.gs`):
 ```javascript
-const WEBHOOK_URL = "https://hermes-expense-tracker.onrender.com/webhook/expense-ingest";
+const WEBHOOK_URL = "https://personal-expense-hermes-deploy.onrender.com/webhook/expense-ingest";
 ```
 
 Then run `clasp push` to deploy the update.
