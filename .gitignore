@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+node_modules/
+auth_state/
+google_token.json
+service-account*.json
+.clasp.json
+*.log
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/

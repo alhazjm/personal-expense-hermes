@@ -1,0 +1,37 @@
+model:
+  default: "MiniMax-M1"
+  provider: "minimax"
+  max_tokens: 8192
+
+terminal:
+  backend: "local"
+  cwd: "."
+  timeout: 180
+
+tools:
+  enabled_toolsets:
+    - core
+    - web
+    - terminal
+    - expense_tracker
+  disabled_tools: []
+
+memory:
+  mode: "local"
+
+gateway:
+  platforms:
+    - name: "whatsapp"
+      enabled: true
+      bridge: "baileys"
+      bridge_port: 3000
+      home_channel:
+        chat_id: "${WHATSAPP_HOME_CHAT_ID}"
+        name: "Home"
+    - name: "webhook"
+      enabled: true
+      port: 8644
+      hmac_secret: "${WEBHOOK_HMAC_SECRET}"
+
+display:
+  skin: "default"
