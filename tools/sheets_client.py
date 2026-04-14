@@ -1,4 +1,5 @@
 import os
+import json
 from datetime import datetime
 from functools import lru_cache
 
@@ -21,8 +22,12 @@ MONTH_COLUMNS = {
 
 @lru_cache(maxsize=1)
 def get_client():
-    creds_path = os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"]
-    creds = Credentials.from_service_account_file(creds_path, scopes=SCOPES)
+    sa_value = os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"]
+    try:
+        info = json.loads(sa_value)
+        creds = Credentials.from_service_account_info(info, scopes=SCOPES)
+    except (json.JSONDecodeError, ValueError):
+        creds = Credentials.from_service_account_file(sa_value, scopes=SCOPES)
     return gspread.authorize(creds)
 
 

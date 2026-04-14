@@ -1,6 +1,6 @@
 # Hermes Finance Agent — Personal Expense Tracker
 
-An automated personal finance assistant built on the [Hermes Agent](https://github.com/alhazjm/hermes-agent) framework. It ingests bank transaction emails (DBS/UOB), categorizes expenses, updates a Google Sheets budget, and interacts via WhatsApp.
+An automated personal finance assistant built on the [Hermes Agent](https://github.com/alhazjm/hermes-agent) framework. It ingests bank transaction emails (DBS/UOB), categorizes expenses via LLM, updates a Google Sheets budget, and interacts via Telegram.
 
 ## Architecture
 
@@ -12,109 +12,73 @@ Google Apps Script ──webhook──▶ Hermes Agent (MiniMax LLM)
                                     │
                         ┌───────────┼───────────┐
                         ▼           ▼           ▼
-                  Google Sheets  WhatsApp    Cron Jobs
+                  Google Sheets  Telegram    Cron Jobs
                   (budget DB)   (user UI)   (reminders)
 ```
 
-## Prerequisites
+## Deployment
+
+This project is designed to run on **Render** ($7/mo Starter tier, Singapore region) for always-on operation.
+
+See [deploy/README.md](deploy/README.md) for the full Render deployment guide.
+
+## Local Development
+
+### Prerequisites
 
 - **Windows 11** with WSL2 enabled
 - **Python 3.11+** (installed inside WSL2)
-- **Node.js 18+** (installed inside WSL2, required for WhatsApp bridge)
-- **Google Cloud project** with Sheets API & Gmail API enabled
+- **Google Cloud project** with Sheets API enabled
 - **MiniMax API key**
-- **WhatsApp** personal account
+- **Telegram bot** (from @BotFather)
 
-## Setup
+### Setup
 
-### 1. Install WSL2
+1. **Install WSL2** (PowerShell as Admin):
+   ```powershell
+   wsl --install
+   ```
 
-Open **PowerShell as Admin** on Windows:
+2. **Install dependencies** (inside WSL2):
+   ```bash
+   cd /mnt/c/Users/Hadi/Projects/personal-expense-tracker
+   bash scripts/setup-wsl.sh
+   ```
 
-```powershell
-wsl --install
-```
+3. **Configure Google Cloud**:
+   ```bash
+   bash scripts/setup-google-oauth.sh
+   ```
 
-Reboot, then open the Ubuntu terminal and set your Unix username/password.
+4. **Set up Google Sheet** — see [sheets-template/README.md](sheets-template/README.md)
 
-### 2. Install dependencies inside WSL2
+5. **Configure Hermes**:
+   ```bash
+   bash hermes-config/install.sh
+   ```
+   Then edit `~/.hermes/.env`:
+   ```
+   MINIMAX_API_KEY=your-key
+   GOOGLE_SERVICE_ACCOUNT_JSON=/path/to/service-account.json
+   GSPREAD_SPREADSHEET_ID=your-spreadsheet-id
+   WEBHOOK_HMAC_SECRET=random-secret
+   TELEGRAM_BOT_TOKEN=from-botfather
+   TELEGRAM_ALLOWED_USER_IDS=your-telegram-user-id
+   ```
 
-```bash
-cd /mnt/c/Users/Hadi/Projects/personal-expense-tracker
-bash scripts/setup-wsl.sh
-```
+6. **Link tools & start**:
+   ```bash
+   bash scripts/link-tools.sh
+   hermes gateway start
+   ```
 
-This installs Python 3.11+, Node.js 18+, clones hermes-agent, and installs all Python deps.
-
-### 3. Configure Google Cloud
-
-```bash
-bash scripts/setup-google-oauth.sh
-```
-
-Follow the prompts to:
-1. Create a Google Cloud project
-2. Enable Google Sheets API
-3. Create a service account and download the JSON key
-4. Share your Google Sheet with the service account email
-
-### 4. Set up the Google Sheet
-
-See [sheets-template/README.md](sheets-template/README.md) for the required sheet structure and default budget categories.
-
-### 5. Configure Hermes
-
-```bash
-bash hermes-config/install.sh
-```
-
-Then edit `~/.hermes/.env` with your actual API keys:
-
-```
-MINIMAX_API_KEY=your-key-here
-GOOGLE_SERVICE_ACCOUNT_JSON=/path/to/service-account.json
-GSPREAD_SPREADSHEET_ID=your-spreadsheet-id
-WEBHOOK_HMAC_SECRET=a-random-secret-string
-```
-
-### 6. Link custom tools into Hermes
-
-```bash
-bash scripts/link-tools.sh
-```
-
-### 7. Set up WhatsApp bridge
-
-```bash
-hermes gateway setup
-# Select: whatsapp
-# Bridge type: baileys
-# Scan the QR code with your phone
-```
-
-### 8. Deploy Gmail Apps Script
-
-See [apps-script/README.md](apps-script/README.md) for clasp deployment instructions.
-
-### 9. Set up cron jobs
-
-```bash
-bash cron/setup-cron-jobs.sh
-```
-
-### 10. Start the agent
-
-```bash
-hermes gateway start
-```
-
-## Usage (via WhatsApp)
+## Usage (via Telegram)
 
 | Message | What happens |
 |---|---|
 | "How much have I spent on food?" | Queries Sheets, returns total |
 | "What's my remaining budget?" | Shows all categories with remaining amounts |
-| "Remind me daily to stop grabbing Grab" | Creates a cron job with daily WhatsApp reminder |
+| "Remind me daily to stop ordering Grab" | Creates a cron job with daily reminder |
 | "Can I afford a $150 jacket?" | Checks discretionary budget and gives assessment |
 | "Reallocate $50 from Dining to Transport" | Updates budget limits in Sheets |
 
@@ -128,9 +92,20 @@ personal-expense-tracker/
 ├── apps-script/         # Google Apps Script (Gmail → webhook)
 ├── cron/                # Scheduled job definitions
 ├── sheets-template/     # Google Sheet structure & default categories
+├── deploy/              # Render deployment (Dockerfile, render.yaml, startup)
 ├── scripts/             # Setup & installation scripts
 └── tests/               # Unit tests & fixtures
 ```
+
+## Cost Breakdown
+
+| Item | Cost |
+|---|---|
+| Render Starter (Singapore) | $7/month |
+| MiniMax API | ~$1-2/month |
+| Google Sheets API | Free |
+| Telegram Bot API | Free |
+| Gmail Apps Script | Free |
 
 ## Future Features
 

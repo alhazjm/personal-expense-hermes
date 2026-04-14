@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: hermes-expense-tracker
+    runtime: docker
+    region: singapore
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: MINIMAX_API_KEY
+        sync: false
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: GSPREAD_SPREADSHEET_ID
+        sync: false
+      - key: WEBHOOK_HMAC_SECRET
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_ALLOWED_USER_IDS
+        sync: false
+    disk:
+      name: hermes-data
+      mountPath: /data
+      sizeGB: 1

@@ -21,12 +21,10 @@ memory:
 
 gateway:
   platforms:
-    - name: "whatsapp"
+    - name: "telegram"
       enabled: true
-      bridge: "baileys"
-      bridge_port: 3000
       home_channel:
-        chat_id: "${WHATSAPP_HOME_CHAT_ID}"
+        chat_id: "${TELEGRAM_ALLOWED_USER_IDS}"
         name: "Home"
     - name: "webhook"
       enabled: true
