@@ -1,5 +1,5 @@
 model:
-  default: "MiniMax-M1"
+  default: "MiniMax-M2.7"
   provider: "minimax"
   max_tokens: 8192
 
