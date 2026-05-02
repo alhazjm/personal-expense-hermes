@@ -20,7 +20,7 @@ I forward bank-alert emails (DBS/UOB) and message my Telegram bot. The agent cat
 | *"Can I afford a $150 jacket?"* | Checks discretionary budget, gives an assessment |
 | *"Reallocate $50 from Dining to Transport"* | Updates budget limits in the sheet |
 
-Behind the scenes there are two skills (`expense-tracker` and `card-optimiser`), 24 registered tools, a tier-2 memory layer in the system prompt, and a custom upstream patch that fixes a model-behaviour bug deterministically.
+Behind the scenes there are four skills (`expense-tracker`, `card-optimiser`, `budget-manager`, `weekly-summary`), 24 registered tools, a tier-2 memory layer in the system prompt, and a custom upstream patch that fixes a model-behaviour bug deterministically.
 
 ---
 
@@ -60,8 +60,10 @@ Tier-2 (in the system prompt every turn) vs tier-3 (FTS5 episodic, queried on de
               │   (tool-calling LLM loop)    │
               │                              │
               │  Skills:                     │
-              │   • expense-tracker v4.9     │
+              │   • expense-tracker v4.11    │
               │   • card-optimiser v1.0      │
+              │   • budget-manager v3.0      │
+              │   • weekly-summary v3.0      │
               │                              │
               │  24 registered tools         │
               │  Tier-2 memory (USER/MEM/    │
@@ -92,7 +94,7 @@ Tier-2 (in the system prompt every turn) vs tier-3 (FTS5 episodic, queried on de
 | Ingress | Telegram bot + Google Apps Script (HMAC webhook) |
 | Egress | Telegram + scheduled cron jobs |
 | Deploy | Docker on Render, Singapore region |
-| Tests | pytest, ~170 tests with a stubbed registry for fast unit runs |
+| Tests | pytest, ~200 tests with a stubbed registry for fast unit runs |
 
 ---
 
@@ -103,22 +105,29 @@ Tier-2 (in the system prompt every turn) vs tier-3 (FTS5 episodic, queried on de
 ├── README.md                  # You are here
 ├── DESIGN.md                  # The four patterns, in depth
 ├── ROADMAP.md                 # What's next, and what's deliberately not next
+├── CLAUDE.md                  # Repo guide for agents (gotchas, SHA bump checklist)
 ├── Dockerfile                 # Build shell — surgical COPY pattern, fail-loud anchors
 ├── deploy/
+│   ├── start.sh               # Container entrypoint (stub here; real one is private)
 │   └── patches/
 │       └── suppress_reply_on_silent_tools.py   # The agent-loop patch (Pattern #1)
 ├── hermes-config/             # Tier-2 memory templates (sanitised)
 │   ├── USER.md.example
 │   ├── MEMORY.md.example
-│   └── SOUL.md.example
+│   ├── SOUL.md.example
+│   └── cli-config.yaml        # Hermes gateway routes + per-platform toolsets
 ├── skills/                    # Versioned skill markdown
-│   ├── expense-tracker/SKILL.md
-│   └── card-optimiser/SKILL.md
+│   ├── expense-tracker/SKILL.md   # v4.11.0
+│   ├── card-optimiser/SKILL.md    # v1.0.0
+│   ├── budget-manager/SKILL.md    # v3.0.0
+│   └── weekly-summary/SKILL.md    # v3.0.0
 ├── tools/                     # Custom tool implementations
 │   ├── sheets_client.py       # Header-name column lookups (Pattern #2)
-│   ├── expense_sheets_tool.py
-│   └── card_optimiser.py
-└── tests/                     # ~170 tests with a fake registry stub
+│   ├── expense_sheets_tool.py # All 24 @register_tool calls live here (handlers
+│   │                          # delegate to card_optimiser for the 5 card tools)
+│   └── card_optimiser.py      # Card-optimiser logic, setup-gated
+├── tests/                     # ~200 tests with a fake registry stub
+└── conftest.py                # Stubs tools.registry so tests run without hermes-agent
 ```
 
 ---
@@ -126,7 +135,7 @@ Tier-2 (in the system prompt every turn) vs tier-3 (FTS5 episodic, queried on de
 ## Status
 
 - Deployed and in daily personal use since late 2025.
-- Two skills shipped (`expense-tracker`, `card-optimiser`).
+- Four skills shipped (`expense-tracker`, `card-optimiser`, `budget-manager`, `weekly-summary`).
 - 24 tools registered.
 - Code in this repo is the **portfolio-curated subset** of the deployed system. Operational config, sensitive memory files, and deployment scripts live in a separate private repo.
 
@@ -161,6 +170,10 @@ Note: `cffi` is a hidden requirement — `gspread` imports `cryptography`, which
 ## What's next
 
 See [ROADMAP.md](ROADMAP.md). Briefly: Obsidian daily notes as a join key across domains, then a third skill (journal/voice notes), then an FTS5 cross-skill recall layer. Storage adapter and multi-tenancy are deliberately deferred until they're needed.
+
+### Future-state ideas (prototyped but not in this repo)
+
+- **Travel mode.** When a non-SGD transaction arrives during a trip, route it through a `TravelMode` tab (date range + per-bucket allocations: food / transport / lodging / activities / misc) instead of the regular Budget. The bucket tag goes into Notes as `[bucket:X]`; per-bucket overspend triggers an automatic Telegram nudge at 80% / 100%, deduped per (trip, bucket, threshold). Validates the same event-driven nudge contract as `card-optimiser` against a different domain. Lives in the deployed instance; not ported here to keep the public surface narrow at 24 tools.
 
 ---
 
