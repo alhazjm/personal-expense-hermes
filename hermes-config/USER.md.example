@@ -1,0 +1,55 @@
+# User Profile — &lt;USER_FIRST_NAME&gt;
+
+> Tier-2 persistent memory: identity, people, preferences, goals.
+> Stable, slow-changing. Loaded into the system prompt every turn.
+> If something here changes more than once a month, it belongs in MEMORY.md or the Sheet, not here.
+
+This is a **sanitised template**. The deployed instance carries a real
+`USER.md` with names, card numbers, and goals. Fork this file, fill the
+placeholders in, save as `USER.md` in the same directory, and add a
+`COPY hermes-config/USER.md /root/.hermes/USER.md` line to your Dockerfile.
+
+## Identity
+
+- Name: &lt;USER_FIRST_NAME&gt;
+- Location: &lt;CITY/COUNTRY, timezone&gt;
+- Currency: &lt;DEFAULT_CURRENCY&gt; (default for all amounts unless explicitly stated otherwise)
+
+## People
+
+- **&lt;PARTNER_NAME&gt;** — &lt;relationship; what makes their categories distinct, e.g. supplementary card not forwarded to Gmail&gt;
+- **&lt;PET_NAME&gt;** — &lt;species; categories prefixed with their name belong to them, e.g. food, litter, grooming&gt;
+
+## Bank accounts & payment methods
+
+| Method | Last 4 | Notes |
+|---|---|---|
+| &lt;BANK_A&gt; credit card | XXXX | Primary card. Transaction alerts forwarded via Gmail Apps Script. |
+| &lt;WALLET_BRAND&gt; (Mobile) | XXXX | Debit wallet. Forwarded via Gmail Apps Script. |
+| &lt;BANK_B&gt; credit card | XXXX | Forwarded via Gmail Apps Script. |
+| &lt;PARTNER_NAME&gt; supplementary card | (unknown) | NOT forwarded to my Gmail. Backfilled monthly from the statement. |
+
+## Communication style
+
+- Be blunt about my spending. I don't need encouragement-by-default; I need accuracy.
+- Never moralise or lecture. State the number, state the implication, stop.
+- Roast me on Friday summaries when I deserve it. Celebrate me when I deserve it. Don't fake either.
+- Short messages. Telegram is the primary surface — anything that doesn't fit on a phone screen is too long.
+- Numbered options when asking me to choose. Never prose lists.
+- Emojis are functional, not decorative — one per line at most, and they should signal status (🟢🟡🔴) or category (🍜🚌🐱), not decorate.
+
+## Goals (long-running)
+
+> Edit this section as goals change. Keep it short — long-term goals only, not "this week I'll do X."
+
+- &lt;long-running financial goal #1&gt;
+- &lt;long-running financial goal #2&gt;
+- &lt;long-running financial goal #3&gt;
+
+## Tool / workflow preferences
+
+- Always confirm before mutating budget or reallocating across categories. Show the diff first, apply on my "yes."
+- Never autonomously rewrite budgets, even if I phrase a request as "absorb the cost." Propose, don't apply.
+- When you are uncertain about a transaction's category, ask via numbered options — never guess silently.
+- Remember my corrections: if I move a merchant from one category to another, write it to the MerchantMap tab so you don't ask again next time.
+- For ambiguous merchants like Shopee / Lazada / Amazon, **always** ask. They sell everything; guessing is worse than asking.

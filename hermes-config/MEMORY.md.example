@@ -1,0 +1,131 @@
+# System Memory
+
+> Tier-2 persistent memory: facts about the system, schemas, conventions, quirks.
+> Stable but editable. Loaded into the system prompt every turn.
+> Do NOT put transactions, derived insights, or session history here. Those live in the Sheet, in the insights store, or in session FTS5 search.
+
+This is a **sanitised template** — most of it is genuinely useful as
+documentation of the system contract (sheet schema, webhook payload, enum
+values, idempotency rules). A few illustrative examples have been
+generalised. Fork as `MEMORY.md` for your own deployment; the schema bits
+should stay verbatim if you keep the same tools.
+
+## Episodic memory (past sessions)
+
+Hermes provides FTS5 full-text search over past sessions automatically. Before answering any question that depends on prior context — trends, patterns, "am I spending more lately," "what did we decide last week" — search past sessions first via the FTS5 backend, then answer. Do not guess from working memory alone.
+
+## Google Sheet schema
+
+The Sheet is the source of truth for all transactions, budgets, and merchant mappings. The agent reads from and writes to it via the `expense_tracker` toolset (defined in `tools/expense_sheets_tool.py`). The `sheets_client` module (`tools/sheets_client.py`) is the only thing that should talk to gspread directly.
+
+### Tab: `Transactions`
+
+Append-only ledger. The bottom row is the most recent transaction. Header row at row 1.
+
+| Col | Name | Type | Notes |
+|---|---|---|---|
+| 1 | Date | YYYY-MM-DD | Transaction date (NOT logged-at date) |
+| 2 | Merchant | Text | Raw merchant string from bank, or user-edited |
+| 3 | Amount | Number | Always positive |
+| 4 | Currency | Text | Default `SGD` |
+| 5 | Category | Text | Must match a row in the `Budget` tab. Auto-created if missing. |
+| 6 | Source | Text | One of: `email`, `manual`, `backfill` |
+| 7 | Payment Method | Text | e.g. `DBS/POSB card ending XXXX`, `PayLah! Wallet (Mobile ending XXXX)`, `UOB Card ending XXXX` |
+| 8 | Notes | Text | Optional |
+| 9 | txn_id | Text | Canonical key. Format: `txn_<YYYYMMDD>_<NNN>` (3-digit sequence within that date). Generated on insert. |
+| 10 | telegram_message_id | Text | Telegram message_id of the bot's confirmation bubble, if any. Empty for webhook-only or backfill rows. |
+| 11 | idempotency_key | Text | SHA-256 hash (16 hex chars) of `date|merchant|amount|payment_method`. Prevents duplicate inserts. |
+
+`txn_id` is the primary key for `edit_expense` and `delete_expense`. Always prefer it over merchant+amount lookup. Merchant+amount fallback exists only for legacy rows that pre-date the schema migration.
+
+`telegram_message_id` is set by `link_telegram_message` after the bot sends its confirmation. When the user replies to a confirmation bubble, the inbound payload's `reply_to_message_id` resolves back to the original `txn_id` via `get_transaction_by_message_id`.
+
+`idempotency_key` is computed and checked on every `log_expense` call. If a row with the same key already exists, the tool returns the existing `txn_id` with `status: "duplicate"` instead of double-inserting. This prevents duplicates when Gmail retries a webhook or network issues cause re-sends.
+
+### Tab: `Budget`
+
+Two layouts are supported by `tools/sheets_client.py:read_budgets`:
+- **Per-month** (recommended): col 1 = Category, cols 2–13 = Jan…Dec monthly limits
+- **Simple**: col 1 = Category, col 2 = Monthly Limit
+
+`update_budget` writes to the per-month column when the per-month layout is detected (header has 13+ columns). When the user does not specify a month, the current month is used.
+
+The full live category list lives **in this tab**, not in MEMORY.md. To see what categories exist right now, call `get_remaining_budget` (which calls `read_budgets` internally). Re-fetch when the user says they added or renamed a category.
+
+### Tab: `MerchantMap`
+
+Learned merchant → category mappings. The agent consults this **before** asking the user to disambiguate.
+
+| Col | Name | Type | Notes |
+|---|---|---|---|
+| 1 | merchant_pattern | Text | Substring matched case-insensitively against the incoming merchant string |
+| 2 | category | Text | Must match a category in the `Budget` tab |
+| 3 | created_at | YYYY-MM-DD | When the mapping was learned |
+
+Lookup logic: `lookup_merchant_category` returns the first row whose `merchant_pattern` is a case-insensitive substring of the incoming merchant. Patterns should be specific enough to avoid collisions ("NTUC" over "N", "GRAB" matches both "GRAB" and "GRABFOOD" so use "GRABFOOD" if you want to distinguish them).
+
+When the user corrects a categorisation, call `learn_merchant_mapping(merchant_pattern, category)` so the next transaction with that merchant gets categorised correctly without asking.
+
+## Webhook payload (Gmail Apps Script → `/webhooks/expense-ingest`)
+
+Sent by `apps-script/Code.gs`. The agent receives this via the `expense-ingest` route configured in `hermes-config/cli-config.yaml`.
+
+```json
+{
+  "bank": "DBS" | "UOB",
+  "type": "paylah" | "card",
+  "amount": 25.00,
+  "currency": "SGD",
+  "merchant": "EXAMPLE MERCHANT NAME",
+  "date": "2026-04-15",
+  "card_last_four": "XXXX" | null,
+  "payment_method": "DBS/POSB card ending XXXX",
+  "source": "email",
+  "raw_from": "alerts@dbs.com",
+  "email_date": "2026-04-15T05:10:00.000Z"
+}
+```
+
+## Quirks & rules
+
+- **Always-ask merchants**: Shopee, Lazada, Amazon. They sell everything; never auto-categorise. Even if `MerchantMap` has a hit, just ask me.
+- **Foreign currency**: bank alerts arrive pre-converted to SGD. If the user manually reports a foreign-currency transaction, store the SGD-equivalent in `Amount` and put the original currency + amount in `Notes`.
+- **Backfilled rows** (`source = "backfill"`) are excluded from subscription-creep detection — otherwise the first monthly statement import would flag every existing subscription as new.
+- **the partner's supplementary card transactions** are NOT in Gmail. They arrive once a month via the DBS statement and are imported through the `backfill_transactions` flow.
+- **`source` values**: only `email`, `manual`, or `backfill`. Do not invent new ones.
+- **Category creation is a side effect**: `log_expense` creates the category in the `Budget` tab with a $0 limit if it doesn't exist, and returns `new_category_created: true`. When that flag is set, follow up by asking the user if they want to set a monthly limit.
+
+## Insights store (tier-4 semantic memory)
+
+### Tab: `Insights`
+
+Persists derived facts from spending reports and summaries so future report
+runs can build on prior conclusions instead of recomputing from scratch.
+
+| Col | Header | Type | Notes |
+|---|---|---|---|
+| 1 | `date` | YYYY-MM-DD | When the insight was written |
+| 2 | `category` | Text | One of: `spending`, `budget`, `subscription`, `trend`, `general` |
+| 3 | `month` | YYYY-MM | Month the insight relates to |
+| 4 | `insight` | Text | Short factual statement |
+
+The tab is auto-created on first `write_insight` call. Tools:
+- `write_insight(insight, category, month)` — persist a derived fact
+- `get_insights(month, category, limit)` — read stored insights
+
+**Rules:**
+- Always call `get_insights` before generating a new spending report.
+- Write 2–3 insights per report. Keep them specific and quantified.
+- Do NOT write vague statements like "spending is normal."
+- Good: "Apr 2026: Transport at $185, 62% of $300 budget — Grab rides up 35% vs Mar"
+
+## What does NOT belong in this file
+
+- Individual transactions → the `Transactions` tab
+- Per-merchant mappings → the `MerchantMap` tab
+- Past conversation content → Hermes FTS5 session search
+- Derived insights → the `Insights` tab
+- The user's personality, goals, or tone preferences → `USER.md`
+- The agent's voice / persona → `SOUL.md`
+
+If MEMORY.md grows past ~200 lines, something on this list has crept in.
