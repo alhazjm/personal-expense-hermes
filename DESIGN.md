@@ -41,11 +41,11 @@ The interesting story is the **v1 → v2 iteration**:
 - **v1** zeroed out `final_response` to an empty string. Logical, minimal change. But hermes-agent's empty-response handling triggered a *retry/nudge cascade* — the framework saw an empty response, assumed the model had glitched, and re-prompted it. That re-prompt sometimes succeeded and produced a duplicate. v1 *moved* the bug; it didn't fix it.
 - **v2** short-circuits the loop entirely instead of muting the response. Skips the retry logic, skips the nudge, exits the agent turn. Solves the underlying state-machine issue rather than the surface symptom.
 
-The patch script anchors on a specific upstream line (`final_response = assistant_message.content or ""` in the no-tool-calls branch of the loop). If upstream refactors that line, the anchor mismatch fails the Docker build with a clear pointer to the patch script — not a silent runtime bug on Render.
+The patch script anchors on a specific upstream line (`final_response = assistant_message.content or ""` in the no-tool-calls branch of the loop). If upstream refactors that line, the anchor mismatch fails the Docker build with a clear pointer to the patch script — not a silent runtime bug at deploy time.
 
 ### The receipt
 
-[`deploy/patches/suppress_reply_on_silent_tools.py`](deploy/patches/suppress_reply_on_silent_tools.py) and the `CLAUDE.md` "hermes-agent SHA bump checklist" that documents which anchors to verify before bumping.
+[`deploy/patches/suppress_reply_on_silent_tools.py`](deploy/patches/suppress_reply_on_silent_tools.py) and the [`CLAUDE.md`](CLAUDE.md) "hermes-agent SHA bump checklist" that documents which anchors to verify before bumping.
 
 ### What this would teach a team I joined
 
@@ -77,19 +77,19 @@ Both fail *quietly*. There's no Docker build error when your fork drifts; you ju
 
 ### What I landed on
 
-The Dockerfile is a "narrow surface" pattern. It clones upstream at a pinned SHA, then COPYs *exactly seven specified paths* from this repo into the container — nothing else. New files in this repo are silently absent on Render unless they're explicitly named in the Dockerfile.
+The Dockerfile is a "narrow surface" pattern. It clones upstream at a pinned SHA (`HERMES_AGENT_SHA`), then COPYs *exactly seven specified paths* from this repo into the container — nothing else. New files in this repo are silently absent at deploy time unless they're explicitly named in the Dockerfile.
 
 Two anchor-string contracts with upstream:
 
-1. **Tool-list injection.** A `sed` one-liner in the Dockerfile inserts our 24 custom tool names into hermes-agent's `toolsets.py` after a specific line (`"send_message",`). If upstream renames or moves that line, the sed silently no-ops and our tools don't appear. To prevent this, the next Dockerfile step *greps* for one of the injected names and exits 1 if missing — turning silent failure into a build error.
+1. **Tool-list injection.** A `sed` one-liner in the Dockerfile inserts our 24 custom tool names into hermes-agent's `toolsets.py` after a specific line (`"send_message",`). If upstream renames or moves that line, the sed silently no-ops and our tools don't appear. To prevent this, the same Dockerfile step pipes into `grep -q '"log_expense"'` — turning silent failure into a build error.
 
-2. **Agent-loop patch anchor.** The patch script (Pattern #1's receipt) targets a specific line in `run_agent.py`. If that line moves or changes shape, the script exits non-zero and the build fails with a pointer to the script. There's a checklist in `CLAUDE.md` that says: before bumping `HERMES_AGENT_SHA`, eyeball upstream for these anchors.
+2. **Agent-loop patch anchor.** The patch script (Pattern #1's receipt) targets a specific line in `run_agent.py`. If that line moves or changes shape, the script exits non-zero and the build fails with a pointer to the script. The Dockerfile also greps for the patch's stable marker after the patch runs, so an "applied but corrupted" outcome is also caught. There's a checklist in [`CLAUDE.md`](CLAUDE.md) that says: before bumping `HERMES_AGENT_SHA`, eyeball upstream for these anchors.
 
 Both patterns share a principle: **failure modes that would otherwise be silent runtime bugs become loud build errors instead.** The cost of the build error is five minutes of investigation; the cost of the silent runtime bug is a user typing into a broken Telegram bot.
 
 ### The receipt
 
-The `Dockerfile` (the surgical COPY block + the sed verification step) and `CLAUDE.md`'s "hermes-agent SHA bump checklist". The pattern is also visible in `tools/sheets_client.py` at a smaller scale — `_get_column_index(ws, header)` does header-name lookup so a new sheet column doesn't silently break a hard-coded index.
+The [`Dockerfile`](Dockerfile) (the surgical COPY block + the sed/grep verification + the patch invocation + marker-grep) and [`CLAUDE.md`](CLAUDE.md)'s "hermes-agent SHA bump checklist". The pattern is also visible in [`tools/sheets_client.py`](tools/sheets_client.py) at a smaller scale — `_get_column_index(ws, header)` does header-name lookup so a new sheet column doesn't silently break a hard-coded index.
 
 ### What this would teach a team I joined
 
@@ -185,7 +185,7 @@ Two disciplines that make this work:
 
 ### The receipt
 
-[`hermes-config/USER.md.example`](hermes-config/), [`hermes-config/MEMORY.md.example`](hermes-config/), [`hermes-config/SOUL.md.example`](hermes-config/) — sanitised templates showing the structure and the "what does NOT belong here" rules. The `skills/` directory shows the versioning convention.
+[`hermes-config/USER.md.example`](hermes-config/USER.md.example), [`hermes-config/MEMORY.md.example`](hermes-config/MEMORY.md.example), [`hermes-config/SOUL.md.example`](hermes-config/SOUL.md.example) — sanitised templates showing the structure and the "what does NOT belong here" rules. The [`skills/`](skills/) directory shows the versioning convention (`expense-tracker` v4.11.0, `card-optimiser` v1.0.0, `budget-manager` v3.0.0, `weekly-summary` v3.0.0).
 
 ### What this would teach a team I joined
 
