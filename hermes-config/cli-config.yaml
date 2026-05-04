@@ -8,16 +8,18 @@ terminal:
   cwd: "."
   timeout: 180
 
-tools:
-  enabled_toolsets:
-    - core
-    - web
-    - terminal
-    - expense_tracker
-  disabled_tools: []
-
 memory:
   mode: "local"
+
+# Suppress the cron executor's default wrapping ("Cronjob Response: ...\n
+# (job_id: ...)\n------------\n\n" header and "To stop or manage this
+# job, send me a new message..." footer). For a single-user deployment
+# the footer's unsubscribe affordance is noise — we already know the
+# "stop reminder X" phrase and can list jobs via `hermes cron list`.
+# Flag lives at cron/scheduler.py:313 in hermes-agent (undocumented in
+# cli-config.yaml.example but production-supported).
+cron:
+  wrap_response: false
 
 platforms:
   telegram:
@@ -25,6 +27,61 @@ platforms:
   webhook:
     enabled: true
     port: 8644
+    extra:
+      secret: __WEBHOOK_SECRET_PLACEHOLDER__
+      routes:
+        expense-ingest:
+          prompt: |
+            New bank transaction received via email webhook:
+            Bank: {bank}
+            Amount: {currency} {amount}
+            Merchant: {merchant}
+            Date: {date}
+            Payment method: {payment_method}
+            Source: {source}
+
+            Use the expense-tracker skill to categorize and log this transaction.
+            When you call log_expense, pass source="email" (this row originated
+            from the Gmail webhook, not from a manual user message).
+          skills:
+            - expense-tracker
+          deliver: telegram
+
+# Explicit per-platform toolset allowlist.
+# Replaces the broad `hermes-telegram` / `hermes-webhook` presets (each of
+# which pulls in ~30 tools including browser_*, image_generate,
+# text_to_speech, etc.) with a narrow set relevant to expense tracking.
+#
+# Dropped from the telegram preset: browser, image_gen, tts.
+# Kept: web, terminal, file, vision, skills, messaging (send_message),
+# cronjob (for reminder scheduling), todo, memory, session_search, clarify.
+#
+# Webhook (no user chat, just Gmail → categorize → log) is tighter still —
+# drops vision, session_search, clarify on top of the telegram drops.
+platform_toolsets:
+  telegram:
+    - web
+    - terminal
+    - file
+    - vision
+    - skills
+    - messaging
+    - cronjob
+    - todo
+    - memory
+    - session_search
+    - clarify
+    - expense_tracker
+  webhook:
+    - web
+    - terminal
+    - file
+    - skills
+    - messaging
+    - cronjob
+    - todo
+    - memory
+    - expense_tracker
 
 display:
   skin: "default"

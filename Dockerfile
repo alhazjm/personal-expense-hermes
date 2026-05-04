@@ -72,7 +72,8 @@ RUN find /app/hermes-agent/skills -mindepth 1 -maxdepth 1 -type d -exec rm -rf {
 COPY skills/ /root/.hermes/skills/
 COPY hermes-config/cli-config.yaml /root/.hermes/config.yaml
 COPY deploy/start.sh /app/start.sh
-RUN chmod +x /app/start.sh
+COPY cron/setup-cron-jobs.sh /app/cron/setup-cron-jobs.sh
+RUN chmod +x /app/start.sh /app/cron/setup-cron-jobs.sh
 
 # NOTE: USER.md / MEMORY.md / SOUL.md are NOT copied here. The deployed
 # instance ships its own private versions; this repo only carries the

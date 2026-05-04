@@ -77,7 +77,7 @@ Both fail *quietly*. There's no Docker build error when your fork drifts; you ju
 
 ### What I landed on
 
-The Dockerfile is a "narrow surface" pattern. It clones upstream at a pinned SHA (`HERMES_AGENT_SHA`), then COPYs *exactly seven specified paths* from this repo into the container — nothing else. New files in this repo are silently absent at deploy time unless they're explicitly named in the Dockerfile.
+The Dockerfile is a "narrow surface" pattern. It clones upstream at a pinned SHA (`HERMES_AGENT_SHA`), then COPYs *exactly eight specified paths* from this repo into the container — nothing else. New files in this repo are silently absent at deploy time unless they're explicitly named in the Dockerfile.
 
 Two anchor-string contracts with upstream:
 

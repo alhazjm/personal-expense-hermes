@@ -33,7 +33,7 @@ When MiniMax-M2.7 wouldn't honour prompt-level "stay silent" instructions, I pat
 → [`deploy/patches/suppress_reply_on_silent_tools.py`](deploy/patches/suppress_reply_on_silent_tools.py) · [DESIGN.md §1](DESIGN.md#1-debug-the-model-not-the-prompt)
 
 ### 2. Fail loud when upstream drifts
-The container clones a third-party agent framework and surgically COPYs in only the files I own. New tools require updating a hard-coded sed injection; the agent-loop patch anchors on a narrow upstream line. Both abort the Docker build loud if the anchor moves — no silent breakage on deploy.
+The container clones a third-party agent framework and surgically COPYs in only the eight files I own. New tools require updating a hard-coded sed injection; the agent-loop patch anchors on a narrow upstream line. Both abort the Docker build loud if the anchor moves — no silent breakage on deploy.
 → [`Dockerfile`](Dockerfile) · [DESIGN.md §2](DESIGN.md#2-fail-loud-when-upstream-drifts)
 
 ### 3. Restraint-shaped roadmap
@@ -126,6 +126,9 @@ Tier-2 (in the system prompt every turn) vs tier-3 (FTS5 episodic, queried on de
 │   ├── expense_sheets_tool.py # All 24 @register_tool calls live here (handlers
 │   │                          # delegate to card_optimiser for the 5 card tools)
 │   └── card_optimiser.py      # Card-optimiser logic, setup-gated
+├── apps-script/Code.gs        # Gmail webhook source — DBS/UOB email parsers + HMAC
+├── cron/setup-cron-jobs.sh    # Multi-skill cron registration (daily/Friday/monthly/Sunday)
+├── sheets-template/README.md  # Full sheet schema + migration notes
 ├── tests/                     # ~200 tests with a fake registry stub
 └── conftest.py                # Stubs tools.registry so tests run without hermes-agent
 ```
