@@ -12,8 +12,8 @@ Uses Telegram Bot API for the messaging interface — permanent token, no sessio
 
 1. Open Telegram and message **@BotFather**
 2. Send `/newbot`
-3. Choose a name (e.g., "Hadi Expense Tracker")
-4. Choose a username (e.g., `hadi_expense_bot`)
+3. Choose a name (e.g., "My Expense Tracker")
+4. Choose a username (e.g., `my_expense_bot`)
 5. Copy the **bot token** (looks like `123456:ABC-DEF1234...`)
 6. Message your new bot once (so it can reply to you)
 7. Get your user ID: message **@userinfobot** and it'll reply with your ID
@@ -23,7 +23,7 @@ Uses Telegram Bot API for the messaging interface — permanent token, no sessio
 **Option A — Blueprint (recommended):**
 1. Go to https://dashboard.render.com/blueprints
 2. Click **New Blueprint Instance**
-3. Connect GitHub → select **personal-expense-hermes-deploy** (private repo)
+3. Connect GitHub → select your fork of this repo (or the private deployment repo)
 4. Render reads `render.yaml` and sets everything up
 
 **Option B — Manual:**
@@ -58,12 +58,12 @@ Telegram bot connected
 
 Once deployed, your service URL will be something like:
 ```
-https://personal-expense-hermes-deploy.onrender.com
+https://<YOUR-RENDER-SERVICE>.onrender.com
 ```
 
 Update `WEBHOOK_URL` in your Apps Script (`Code.gs`):
 ```javascript
-const WEBHOOK_URL = "https://personal-expense-hermes-deploy.onrender.com/webhook/expense-ingest";
+const WEBHOOK_URL = "https://<YOUR-RENDER-SERVICE>.onrender.com/webhooks/expense-ingest";
 ```
 
 Then run `clasp push` to deploy the update.

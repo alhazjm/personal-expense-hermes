@@ -46,6 +46,29 @@ for dir in sessions memories cron; do
     fi
 done
 
+# Inject webhook HMAC secret into config (can't use env vars in YAML)
+if [ -n "${WEBHOOK_HMAC_SECRET:-}" ]; then
+    sed -i "s/__WEBHOOK_SECRET_PLACEHOLDER__/${WEBHOOK_HMAC_SECRET}/" "$HERMES_HOME/config.yaml"
+    echo "Webhook secret injected into config"
+fi
+
+# Seed cron jobs once per persistent disk. The marker lives on /data so it
+# survives container restarts but is re-seeded if the disk is recreated.
+# Failures are non-fatal: we still start the gateway so the user can inspect
+# logs and the next restart retries.
+SEED_MARKER="/data/cron/.seeded"
+if [ ! -f "$SEED_MARKER" ]; then
+    echo "Seeding cron jobs (first run on this disk)..."
+    if bash /app/cron/setup-cron-jobs.sh; then
+        touch "$SEED_MARKER"
+        echo "Cron jobs seeded successfully"
+    else
+        echo "WARNING: cron seeding failed — gateway will start anyway; next restart will retry"
+    fi
+else
+    echo "Cron jobs already seeded (marker: $SEED_MARKER)"
+fi
+
 echo "Starting Hermes gateway (foreground)..."
 echo "TELEGRAM_BOT_TOKEN is set: $([ -n "$TELEGRAM_BOT_TOKEN" ] && echo 'yes' || echo 'NO')"
 echo "TELEGRAM_ALLOWED_USERS: ${TELEGRAM_ALLOWED_USERS:-not set}"

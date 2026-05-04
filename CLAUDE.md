@@ -52,7 +52,9 @@ tools/
   sheets_client.py             # gspread wrapper — all sheet I/O
   expense_sheets_tool.py       # Hermes tool registrations (log_expense, edit_expense, etc.)
   card_optimiser.py            # Card optimiser logic + 5 tools, gated behind sheet setup
-sheets-template/README.md      # Sheet schema reference
+apps-script/Code.gs            # Gmail webhook source — bank email parsers + HMAC + FX
+cron/setup-cron-jobs.sh        # Multi-skill cron registration (daily/Friday/monthly/Sunday)
+sheets-template/README.md      # Sheet schema reference + migration steps
 tests/test_expense_sheets_tool.py
 tests/test_card_optimiser.py
 tests/test_email_parser.py
