@@ -103,31 +103,6 @@ step depends on.
 8. **Cross-skill `recall` in production.** Once 3+ skills exist, recall
    becomes the main UX: "when did I last …" questions span domains.
 
-## Long-term (9–18 months) — productisation prep
-
-Only if you want to share/sell. Resist until 5 friends are using it daily.
-
-9. **Storage adapter refactor.** Today `expense_sheets_tool.py` calls
-   `sheets_client.py` directly. Introduce a `Storage` protocol with methods
-   like `append_transaction`, `lookup_merchant`, etc. Implementations:
-   `SheetsStorage` (today), `PostgresStorage` (later). No behaviour change
-   on this step — purely shape.
-
-10. **Per-tenant namespacing.** Use **Hermes Profiles** — shipped in
-    upstream v0.6.0, inherited by our fork. One Profile per tenant: its
-    own `HERMES_HOME`, config, bot token, skills, memories, sessions,
-    gateway process. Create via `hermes profile create <tenant_id>`,
-    switch via `hermes -p <tenant_id>`. Profiles are the right primitive
-    *only* for tenant isolation — don't use them for multi-skill within a
-    single user (skills in the same profile share tools cleanly, which is
-    what card-optimiser + expense-tracker do).
-
-11. **Second storage backend.** Postgres on Render or Supabase. Sheets stays
-    as an optional export/view — users like seeing their data in a grid.
-
-12. **Billing + auth.** Last. Stripe + magic-link email, no more. Only once
-    users are asking to pay.
-
 ## Insurance-today: what to change now for future-sale compatibility
 
 **Nothing structural.** Specifically resist:
