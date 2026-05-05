@@ -59,15 +59,6 @@ _CATEGORY_EMOJI_KEYWORDS = [
     ("pet grooming",   "✂️"),
     ("pet dental",     "🦷"),
     ("pet",            "🐱"),
-    ("partner food",       "🥘"),
-    ("partner travel",     "✈️"),
-    ("partner phone",      "📱"),
-    ("partner clothes",    "👗"),
-    ("partner dental",     "🦷"),
-    ("partner hair",       "💇"),
-    ("partner self",       "📚"),
-    ("partner",            "💕"),
-    ("personal - food", "🍜"),
     ("food",            "🍜"),
     ("drink",           "🍜"),
     ("groc",            "🛒"),
@@ -455,7 +446,7 @@ LOG_EXPENSE_PENDING_SCHEMA = {
                 "description": (
                     "Numbered category options to offer the user. Include "
                     "the category emoji if available, e.g. "
-                    "['🍜 Personal - Food & Drinks', '🛒 Groceries']. "
+                    "['🍜 Food & Dining', '🛒 Groceries']. "
                     "Keep to 2-4 plausible options; the user can also "
                     "reply with a freeform category name."
                 ),
@@ -1534,7 +1525,7 @@ APPEND_JOURNAL_ENTRY_SCHEMA = {
                 "type": "string",
                 "description": (
                     "Optional short tags extracted from the reply, comma-"
-                    "separated (e.g. 'partner,promo,regret'). Keep to 1-3. "
+                    "separated (e.g. 'recurring,regret,promo'). Keep to 1-3. "
                     "Leave empty if nothing obvious stands out."
                 ),
                 "default": "",

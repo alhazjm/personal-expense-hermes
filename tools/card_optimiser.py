@@ -1,7 +1,8 @@
 """Card optimiser — category-keyed earn-rate strategy + event-driven nudges.
 
-See `docs/CARD-OPTIMISER-ARCHITECTURE.md` for the full design. Everything in
-this module is gated behind `_check_setup()` — tools return
+See `skills/card-optimiser/SKILL.md` for the user-facing flow and
+`sheets-template/README.md` for the tab schemas. Everything in this module
+is gated behind `_check_setup()` — tools return
 `{"status": "setup_required", ...}` until the user populates the `Cards` and
 `CardStrategy` tabs (with at least one row each and a `_default` sentinel row
 in `CardStrategy`).

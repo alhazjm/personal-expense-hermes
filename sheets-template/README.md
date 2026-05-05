@@ -57,7 +57,7 @@ The agent auto-detects the layout by counting header columns: 13+ columns = per-
 
 ### Default categories
 
-A starting set is in `budget_categories.json`. the user's actual live categories (Personal - Food & Drinks, the partner Food, the pet Litter, etc.) are in his sheet — the JSON file is just a generic seed for new installs.
+A starting set is in `budget_categories.json` — `Food & Dining`, `Transport`, `Groceries`, `Shopping`, `Entertainment`, `Subscriptions`, `Utilities`, `Health`, `Miscellaneous`. Treat it as a generic seed for new installs; the agent doesn't depend on these specific names — it picks whatever rows exist in the `Budget` tab and auto-creates new ones at $0 limit when a transaction lands in an unseen category.
 
 ---
 
@@ -265,105 +265,6 @@ timestamp | cycle_window | card_id | category | threshold | triggering_txn_id | 
 ```
 
 Dedup rule: at most one nudge per `(cycle_window, card_id, category, threshold)` tuple. The 100% nudge is additionally suppressed if the 80% nudge already fired AND the last 2 transactions in that category used the fallback card ("silent when already switched").
-
----
-
-## Tab 10: `TravelMode` (new in v6 — travel mode)
-
-One row per trip. The agent reads this to detect whether today's date
-falls inside a trip and, if so, route foreign-currency (FX-converted)
-transactions to the trip's main Budget category with a per-bucket tag in
-Notes.
-
-**You maintain this manually.** Append a new row before each trip.
-Day trips just have `start_date == end_date`. The skill tolerates the tab
-being absent — travel mode simply doesn't activate. Old trip rows are
-fine to leave in place (they act as audit trail) or prune.
-
-| Col | Header | Type | Notes |
-|---|---|---|---|
-| 1 | `start_date` | YYYY-MM-DD | First day of the trip (inclusive). |
-| 2 | `end_date` | YYYY-MM-DD | Last day of the trip (inclusive). Same as `start_date` for day trips. |
-| 3 | `label` | Text | Stable trip label, e.g. `ID Apr 2026`, `JB day 2026-05-15`. Used in nudges and `set_trip_bucket` lookups. Should be unique. |
-| 4 | `trip_category` | Text | The main `Budget` tab category that all this trip's transactions land in (e.g. `Travel - ID 2026-04`). Pre-create this row in the `Budget` tab with the trip's total budget. |
-| 5 | `budget_map` | Text | Per-bucket allocation as `key=value` pairs separated by `;`, e.g. `food=450; transport=300; flight=800; activities=300; misc=150`. Bucket names are lowercase. The sum doesn't have to equal `total_budget` — buffer is fine. |
-| 6 | `total_budget` | Number | Total trip envelope (SGD). Surfaced in trip status; existing budget warnings on the `Budget` tab row also fire on this number. |
-| 7 | `notes` | Text | Free-text. |
-
-**Header row exactly:**
-```
-start_date | end_date | label | trip_category | budget_map | total_budget | notes
-```
-
-### Activation rule
-
-Travel mode kicks in on a transaction ONLY when **all three** hold:
-
-1. Today's date is within at least one TravelMode row's `[start_date, end_date]`.
-2. The transaction's original currency was non-SGD (Apps Script stamps an
-   `orig: <currency> <amount>` prefix in Notes during FX conversion — that's
-   the signal).
-3. `MerchantMap` returns no match for the merchant.
-
-Combined effect:
-
-- Spotify or insurance auto-billing during a trip → SGD → skip travel mode → normal flow.
-- Amazon US online purchase from home during the trip dates → non-SGD but
-  matches MerchantMap (if you've taught it once) → skip travel mode.
-- Foreign-currency card swipe at a Jakarta restaurant → non-SGD + no
-  MerchantMap match + active trip → travel mode routes to `trip_category`
-  with `[bucket:food]` in Notes.
-
-If multiple TravelMode rows match today's date (overlapping or back-to-back
-trips), the most recently appended row wins, and `get_active_travel_mode`
-surfaces an `overlap_warning` in the response. Prune the older row.
-
-### Per-trip Budget tab setup
-
-Before each trip, add a row to the `Budget` tab named exactly the same as
-`trip_category` (e.g. `Travel - ID 2026-04`). Set its monthly limit to the
-trip's `total_budget` for the month the trip occurs in. After the trip,
-the row stays as historical record — your existing monthly reports will
-show the trip total alongside other categories.
-
-### How the bucket tag works
-
-When a trip txn fires through `log_expense`, the agent stamps a
-`[bucket:X]` prefix at the start of the `Notes` cell, e.g.:
-
-```
-[bucket:food] orig: IDR 184000.00 @ 0.000092 (frankfurter 2026-04-25)
-```
-
-`get_trip_budget_status` reads the trip's transactions, parses the
-`[bucket:X]` tags, sums per bucket, and compares to `budget_map`. Untagged
-trip txns get reported separately so you can retag them via
-`set_trip_bucket`.
-
----
-
-## Tab 11: `TripNudgeLog` (auto-created)
-
-Auto-created by `tools/travel_mode.py::_ensure_nudge_log` on the first
-trip-bucket nudge. You don't create it manually. Records which bucket
-nudges have already fired so we don't re-fire on every subsequent trip
-transaction.
-
-| Col | Header | Type | Notes |
-|---|---|---|---|
-| 1 | `timestamp` | ISO 8601 | When the nudge was sent. |
-| 2 | `trip_label` | Text | The trip's `label` from TravelMode. |
-| 3 | `bucket` | Text | The bucket whose budget was crossed. |
-| 4 | `threshold` | Integer | `80` or `100` — the threshold that fired. |
-| 5 | `budget_at_nudge` | Number | The bucket's allocation at the moment of the nudge. If you reallocate mid-trip (e.g. shift $150 from misc to food) and the budget changes, the dedup key changes too — a fresh nudge fires when the new budget threshold is crossed. |
-| 6 | `triggering_txn_id` | Text | Best-effort txn_id of the transaction that crossed the threshold. |
-
-**Header row exactly:**
-```
-timestamp | trip_label | bucket | threshold | budget_at_nudge | triggering_txn_id
-```
-
-Dedup rule: at most one nudge per `(trip_label, bucket, threshold, budget_at_nudge)` tuple.
 
 ---
 
