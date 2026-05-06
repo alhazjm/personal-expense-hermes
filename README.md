@@ -159,3 +159,25 @@ Cron-invoked. Shares the expense-tracker tool surface; only the prompt changes.
 | Egress | Telegram + scheduled cron jobs |
 | Deploy | Docker on Render, Singapore region |
 | Tests | pytest, ~200 tests with a stubbed registry for fast unit runs |
+
+---
+
+## Setting up the Google Sheet
+
+The agent treats one Google Sheet as its database. Full schema and migration steps live in [sheets-template/README.md](sheets-template/README.md); the minimal path is:
+
+1. **Create a new Google Sheet** with a `Transactions` tab. Header row exactly:
+   ```
+   Date | Merchant | Amount | Currency | Category | Source | Payment Method | Notes | txn_id | telegram_message_id | idempotency_key
+   ```
+   `MerchantMap`, `Insights`, `Journal`, `WebhookLog`, and `CardNudgeLog` tabs are auto-created on first write — you don't need to make them yourself.
+
+2. **Add a `Budget` tab.** Two layouts work: per-month (`Category | Jan | Feb | … | Dec`) or simple (`Category | Monthly Limit`). [`sheets-template/budget_categories.json`](sheets-template/budget_categories.json) is a generic seed of 9 starter categories. The agent auto-creates new `Budget` rows at $0 limit when a transaction lands in an unseen category, so the seed is just a starting shape — not a hard schema.
+
+3. **Share the sheet with a service account.** Create a Google Cloud service account, download the JSON key, share the sheet with the service account email as **Editor**, and set two env vars before running the agent:
+   - `GSPREAD_SPREADSHEET_ID` — from the sheet URL
+   - `GOOGLE_SERVICE_ACCOUNT_JSON` — path to (or inline contents of) the key file
+
+4. **Optional: enable card-optimiser.** Populate the `Cards` and `CardStrategy` tabs (schema in [sheets-template/README.md](sheets-template/README.md)) with at least one card row and a `_default` row in `CardStrategy`. Until both tabs exist with data, every card-optimiser tool returns `{"status": "setup_required"}` and the rest of the agent works untouched.
+
+The header strings must match exactly — [`tools/sheets_client.py`](tools/sheets_client.py) does header-name column lookups (`_get_column_index`) instead of fixed indices, which is what lets older 8-column sheets keep working alongside the v4 11-column layout.
